@@ -79,8 +79,16 @@ def visualize_convex_hull_2d(X, A, hull=None):
     ax.legend()
     return fig
 
-def visualize_convex_hull_3d(X, A, hull=None, axis_indexes=[0, 1, 2]):
+def visualize_convex_hull_3d(X, A, hull=None, axis_args=["A", "C", "B"]):
     args_list = list(A)
+    
+    label_to_index = {label: i for i, label in enumerate(args_list)}
+
+    # Map chosen axis names to indices
+    try:
+        axis_indexes = [label_to_index[label] for label in axis_args]
+    except KeyError as e:
+        raise ValueError(f"Axis name {e} not found in A: {args_list}")
     
     # Extract only the 3 dimensions we want to visualize
     X_3d = X[:, axis_indexes]
@@ -162,7 +170,7 @@ if relations_input:
 n_samples = st.sidebar.slider("Number of samples", 100, 10000, 1000, 100)
 
 # 3D axis selection (only shown if 3+ arguments)
-axis_indexes = None
+axis_args = None
 if len(A) >= 3:
     st.sidebar.subheader("3D Visualization Settings")
     args_list = sorted(list(A))
@@ -174,7 +182,7 @@ if len(A) >= 3:
     with col3:
         z_axis = st.selectbox("Z-axis", args_list, index=min(2, len(args_list)-1))
     
-    axis_indexes = [args_list.index(x_axis), args_list.index(y_axis), args_list.index(z_axis)]
+    axis_args = [x_axis, y_axis, z_axis]
 
 # Display current configuration
 st.header("Current Configuration")
@@ -218,7 +226,7 @@ if st.button("Generate Convex Hull", type="primary"):
                 st.pyplot(fig)
                 
             elif len(A) >= 3:
-                fig = visualize_convex_hull_3d(X, A, hull, axis_indexes)
+                fig = visualize_convex_hull_3d(X, A, hull, axis_args)
                 st.pyplot(fig)
             
             # Display statistics
@@ -235,20 +243,19 @@ if st.button("Generate Convex Hull", type="primary"):
                     )
 
 # Information section
-with st.expander("ℹ️ About this tool"):
-    st.markdown("""
-    This tool implements the **Weighted H-Categorizer** algorithm for abstract argumentation frameworks.
-    
-    **How it works:**
-    1. Define a set of arguments
-    2. Specify attack relations between arguments
-    3. The algorithm computes acceptability degrees by randomly sampling intrinsic weights
-    4. The convex hull of all possible acceptability vectors is visualized
-    
-    **Formula:**
-    ```
-    HC_{k+1}(a) = w(a) / (1 + sum(HC_k(b) for b in Att(a)))
-    ```
-    
-    **Reference:** [Amgoud & Ben-Naim, AIJ 2018](https://www.irit.fr/~Leila.Amgoud/AIJ-V0.pdf)
-    """)
+st.markdown("""
+This tool implements the **Weighted H-Categorizer** algorithm for abstract argumentation frameworks.
+
+**How it works:**
+1. Define a set of arguments
+2. Specify attack relations between arguments
+3. The algorithm computes acceptability degrees by randomly sampling intrinsic weights
+4. The convex hull of all possible acceptability vectors is visualized
+
+**Formula:**
+```
+HC_{k+1}(a) = w(a) / (1 + sum(HC_k(b) for b in Att(a)))
+```
+
+**Reference:** [Amgoud & Ben-Naim, AIJ 2018](https://www.irit.fr/~Leila.Amgoud/AIJ-V0.pdf)
+""")
