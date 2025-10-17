@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from scipy.spatial import ConvexHull
+import plotly.graph_objects as go
 import random
 
 # Set page configuration
@@ -61,23 +62,45 @@ def visualize_convex_hull_1d(X, A):
     return fig
 
 def visualize_convex_hull_2d(X, A, hull=None):
-    fig, ax = plt.subplots(figsize=(8, 8))
-    ax.scatter(X[:, 0], X[:, 1], color="blue", alpha=0.4, label="Points", s=10)
+    args_list = list(A)
+    
+    fig = go.Figure()
+    
+    # Add scatter points
+    fig.add_trace(go.Scatter(
+        x=X[:, 0],
+        y=X[:, 1],
+        mode='markers',
+        marker=dict(size=4, color='blue', opacity=0.4),
+        name='Points'
+    ))
     
     if hull is not None:
-        for simplex in hull.simplices:
-            ax.plot(X[simplex, 0], X[simplex, 1], "r-", linewidth=2)
-        ax.fill(X[hull.vertices, 0], X[hull.vertices, 1], "red", alpha=0.2, label="Convex Hull")
-    else:
-        ax.set_title("Not enough points for a convex hull")
+        # Add convex hull boundary
+        hull_points = X[hull.vertices]
+        hull_points = np.vstack([hull_points, hull_points[0]])  # Close the polygon
+        
+        fig.add_trace(go.Scatter(
+            x=hull_points[:, 0],
+            y=hull_points[:, 1],
+            mode='lines',
+            line=dict(color='red', width=2),
+            fill='toself',
+            fillcolor='rgba(255, 0, 0, 0.2)',
+            name='Convex Hull'
+        ))
     
-    args_list = list(A)
-    ax.set_xlabel(f"Acceptability of {args_list[0]}")
-    ax.set_ylabel(f"Acceptability of {args_list[1]}")
-    ax.set_title("2D Convex Hull Visualization")
-    ax.grid(True, linestyle="--", alpha=0.5)
-    ax.legend()
+    fig.update_layout(
+        title="2D Convex Hull Visualization",
+        xaxis_title=f"Acceptability of {args_list[0]}",
+        yaxis_title=f"Acceptability of {args_list[1]}",
+        hovermode='closest',
+        width=800,
+        height=800
+    )
+    
     return fig
+
 
 def visualize_convex_hull_3d(X, A, hull=None, axis_args=["A", "C", "B"]):
     args_list = list(A)
@@ -90,6 +113,7 @@ def visualize_convex_hull_3d(X, A, hull=None, axis_args=["A", "C", "B"]):
     except KeyError as e:
         raise ValueError(f"Axis name {e} not found in A: {args_list}")
     
+    
     # Extract only the 3 dimensions we want to visualize
     X_3d = X[:, axis_indexes]
     
@@ -97,34 +121,63 @@ def visualize_convex_hull_3d(X, A, hull=None, axis_args=["A", "C", "B"]):
     ys = X_3d[:, 1]
     zs = X_3d[:, 2]
     
-    fig = plt.figure(figsize=(10, 8))
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(xs, ys, zs, color='green', alpha=0.3, s=10, label="Points")
+    fig = go.Figure()
+    
+    # Add scatter points
+    fig.add_trace(go.Scatter3d(
+        x=xs,
+        y=ys,
+        z=zs,
+        mode='markers',
+        marker=dict(size=2, color='green', opacity=0.3),
+        name='Points'
+    ))
     
     if hull is not None:
         # Compute convex hull for the 3D projection
         try:
             hull_3d = ConvexHull(X_3d)
-            hull_collection = Poly3DCollection(
-                X_3d[hull_3d.simplices],
-                alpha=0.25,
-                facecolor='cyan',
-                linewidths=1,
-                edgecolors='k'
-            )
-            ax.add_collection3d(hull_collection)
             
+            # Add convex hull surface
+            for simplex in hull_3d.simplices:
+                simplex_points = X_3d[simplex]
+                # Close the triangle
+                simplex_points = np.vstack([simplex_points, simplex_points[0]])
+                
+                fig.add_trace(go.Mesh3d(
+                    x=X_3d[simplex, 0],
+                    y=X_3d[simplex, 1],
+                    z=X_3d[simplex, 2],
+                    color='cyan',
+                    opacity=0.25,
+                    showlegend=False
+                ))
+            
+            # Add hull vertices
             hull_vertices_3d = X_3d[hull_3d.vertices]
-            ax.plot(hull_vertices_3d[:, 0], hull_vertices_3d[:, 1], hull_vertices_3d[:, 2],
-                    'r.', markersize=8, label="Hull Vertices")
+            fig.add_trace(go.Scatter3d(
+                x=hull_vertices_3d[:, 0],
+                y=hull_vertices_3d[:, 1],
+                z=hull_vertices_3d[:, 2],
+                mode='markers',
+                marker=dict(size=5, color='red'),
+                name='Hull Vertices'
+            ))
+            
         except Exception as e:
             st.warning(f"Could not compute 3D hull for selected axes: {e}")
     
-    ax.set_title("3D Convex Hull Visualization")
-    ax.set_xlabel(f'Acceptability of {args_list[axis_indexes[0]]}')
-    ax.set_ylabel(f'Acceptability of {args_list[axis_indexes[1]]}')
-    ax.set_zlabel(f'Acceptability of {args_list[axis_indexes[2]]}')
-    ax.legend()
+    fig.update_layout(
+        title="3D Convex Hull Visualization (Interactive)",
+        scene=dict(
+            xaxis_title=f'Acceptability of {args_list[axis_indexes[0]]}',
+            yaxis_title=f'Acceptability of {args_list[axis_indexes[1]]}',
+            zaxis_title=f'Acceptability of {args_list[axis_indexes[2]]}'
+        ),
+        width=900,
+        height=800,
+        showlegend=True
+    )
     
     return fig
 
@@ -201,7 +254,7 @@ with col2:
         st.write("No attack relations defined")
 
 # Compute and visualize button
-if st.button("Generate Convex Hull", type="primary"):
+if st.button("🚀 Generate Convex Hull", type="primary"):
     if len(A) == 0:
         st.error("Please define at least one argument")
     else:
@@ -223,11 +276,11 @@ if st.button("Generate Convex Hull", type="primary"):
                 
             elif len(A) == 2:
                 fig = visualize_convex_hull_2d(X, A, hull)
-                st.pyplot(fig)
+                st.plotly_chart(fig, use_container_width=True)
                 
             elif len(A) >= 3:
                 fig = visualize_convex_hull_3d(X, A, hull, axis_args)
-                st.pyplot(fig)
+                st.plotly_chart(fig, use_container_width=True)
             
             # Display statistics
             st.header("Statistics")
