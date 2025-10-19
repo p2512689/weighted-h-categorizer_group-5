@@ -182,7 +182,7 @@ def visualize_convex_hull_3d(X, A, hull=None, axis_args=["A", "C", "B"]):
     return fig
 
 # Streamlit App
-st.title("🔷 Weighted H-Categorizer Convex Hull Visualizer")
+st.title("Weighted H-Categorizer Convex Hull Visualizer")
 st.markdown("Visualize the convex hull of acceptability degrees for argumentation frameworks")
 
 # Sidebar for inputs
@@ -254,7 +254,7 @@ with col2:
         st.write("No attack relations defined")
 
 # Compute and visualize button
-if st.button("🚀 Generate Convex Hull", type="primary"):
+if st.button("Generate Convex Hull", type="primary"):
     if len(A) == 0:
         st.error("Please define at least one argument")
     else:
